@@ -1,88 +1,136 @@
 ```markdown
-## How to Use the Script
+# PC Security Camera — Clear Setup & Usage Instructions
 
-This script runs on **Windows** and captures a webcam photo on events like PC unlock, lock, or logon. It then emails the photo with approximate location info (via public IP). It requires Python setup.
+Repository: [PC-Security-Camera](https://github.com/1911118/PC-Security-Camera.git)
 
-**Important Security Warning:**  
-The original script has hardcoded email credentials — this is highly insecure! **Never commit or share the script with real credentials.** Always use environment variables (explained below). As of 2025, "Less secure app access" is completely disabled by Google. You **must** use a Gmail App Password.
+This script (Windows) captures a webcam photo when the PC is unlocked/locked/or a user logs on, looks up approximate location by public IP, and emails the photo. It requires Python and some Windows configuration.
 
-### 1. Install Requirements
+IMPORTANT SECURITY WARNING
+- Never store real email passwords in the script. Do NOT commit credentials to the repository.
+- Use environment variables and a Gmail App Password (Google has disabled "less secure apps"). You must enable 2‑Step Verification and create an App Password if using Gmail.
 
-- Download and install Python 3.12+ from [python.org](https://www.python.org/downloads/) (check "Add Python to PATH" during installation).
+1. Prerequisites
+- Windows 10/11.
+- Python 3.12+ installed (download: https://www.python.org/downloads/). During install check “Add Python to PATH”.
+- A working webcam.
+- A Gmail account with 2‑Step Verification enabled and an App Password (if using Gmail as sender).
 
-- Open Command Prompt and install required libraries:
+2. Install required Python packages
+Open Command Prompt (or PowerShell) and run:
+```
+pip install opencv-python requests
+```
+- The script uses `cv2` (OpenCV) for webcam capture and `requests` for IP/location lookup. Email sending uses Python's built-in `smtplib`.
+
+3. Secure your email credentials (MANDATORY)
+- Modify the script to read credentials from environment variables instead of hardcoding. Example at top of the script:
+```python
+import os
+
+EMAIL_SENDER = os.environ.get('EMAIL_SENDER')       # e.g. you@gmail.com
+EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')   # App Password (16 chars) for Gmail
+EMAIL_RECEIVER = os.environ.get('EMAIL_RECEIVER')   # recipient (or hardcode only receiver)
+```
+- Create a Gmail App Password:
+  1. Turn on 2‑Step Verification: https://myaccount.google.com/security → "2-Step Verification".
+  2. Create an App Password: https://myaccount.google.com/apppasswords  
+     - Select App = "Mail", Device = "Other (Custom name)" → name it (e.g., "PC Security Script").
+     - Copy the 16‑character App Password.
+
+- Set environment variables on Windows (choose one):
+
+  a) Using GUI:
+  - Search "Edit environment variables for your account" → User variables → New:
+    - Variable name: EMAIL_SENDER
+      Value: you@gmail.com
+    - Variable name: EMAIL_PASSWORD
+      Value: (the 16-character App Password)
+    - Variable name: EMAIL_RECEIVER
+      Value: recipient@example.com
+
+  b) Using Command Prompt (persistent for current user):
   ```
-  pip install opencv-python requests
+  setx EMAIL_SENDER "you@gmail.com"
+  setx EMAIL_PASSWORD "your_app_password_here"
+  setx EMAIL_RECEIVER "recipient@example.com"
   ```
-  (The script uses `cv2` for webcam access, `requests` for location lookup, and built-in `smtplib` for email.)
+  After setx, open a new Command Prompt / PowerShell window to see the variables.
 
-### 2. Secure Your Email Credentials (Mandatory)
+  c) Temporary for current session (not persistent):
+  - Command Prompt:
+    ```
+    set EMAIL_SENDER=you@gmail.com
+    set EMAIL_PASSWORD=your_app_password_here
+    set EMAIL_RECEIVER=recipient@example.com
+    ```
+  - PowerShell:
+    ```
+    $env:EMAIL_SENDER="you@gmail.com"
+    $env:EMAIL_PASSWORD="your_app_password_here"
+    $env:EMAIL_RECEIVER="recipient@example.com"
+    ```
 
-- Edit the script to remove hardcoded credentials:
-  ```python
-  import os  # Add this at the top if not already present
+4. Save and test the script manually
+- Save the script as: security_camera.py (in a folder you control).
+- Open a new Command Prompt and navigate to the folder:
+```
+cd C:\Path\To\Your\Script
+```
+- Run a manual test:
+```
+python security_camera.py test
+```
+Expected behavior:
+- The script creates folders if needed (e.g., C:\SecurityCaptures, C:\SecurityScript).
+- It captures a photo (saved in C:\SecurityCaptures).
+- Looks up approximate location via public IP.
+- Sends an email with the photo attached.
+- Check the console output, the captures folder, and your email inbox.
 
-  EMAIL_SENDER = os.environ.get('EMAIL_SENDER')
-  EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-  EMAIL_RECEIVER = "your_receiver_email@example.com"  # Hardcode only the receiver or also use env var
-  ```
+5. Configure automatic triggers with Task Scheduler
+- Open Task Scheduler (search in Start).
+- Click "Create Task" (not "Create Basic Task").
+  - General tab:
+    - Name: e.g., "Security Camera - On Unlock"
+    - Check "Run with highest privileges".
+    - Optionally select "Run whether user is logged on or not" if you want it to run in background.
+  - Triggers tab:
+    - Click New → Begin the task: choose one:
+      - "On workstation unlock" (recommended)
+      - "On workstation lock"
+      - "At log on" (or "At log on of any user")
+    - Click OK.
+  - Actions tab:
+    - Click New → Action: Start a program
+      - Program/script: path to python.exe (find with `where python` in CMD or `Get-Command python` in PowerShell). Example:
+        C:\Users\YourUser\AppData\Local\Programs\Python\Python312\python.exe
+      - Add arguments: full path to the script and the mode argument, e.g.:
+        "C:\Path\To\security_camera.py" unlock
+        (Wrap the script path in quotes if it contains spaces. Replace `unlock` with `lock` or `logon` as appropriate.)
+      - Start in: the script folder (optional).
+    - Click OK.
+  - Conditions tab:
+    - Uncheck "Start the task only if the computer is on AC power" if you want it to run on battery.
+  - Settings tab:
+    - Optionally check "Hidden" to prevent console windows from showing.
+    - Ensure "If the task fails, restart every..." is configured to your preference.
+- Save. You may be prompted for credentials if you chose to run whether user is logged on or not.
 
-- **Set up Gmail App Password (required since Less Secure Apps are disabled):**
-  1. Enable **2-Step Verification** on your Google Account: Go to [myaccount.google.com/security](https://myaccount.google.com/security) → "2-Step Verification" → Turn it on.
-  2. Generate an **App Password**:
-     - Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
-     - Select app: "Mail", Select device: "Other (Custom name)" → Name it e.g., "Security Script".
-     - Copy the 16-character password generated.
-  3. Set environment variables on Windows:
-     - Search for "Environment Variables" in the Start menu.
-     - Under "User variables", add:
-       - `EMAIL_SENDER` → your Gmail address (e.g., `you@gmail.com`)
-       - `EMAIL_PASSWORD` → the 16-character App Password (not your main password!)
+- Test:
+  - Lock and unlock the PC (or trigger the chosen event). Confirm email arrives.
 
-- Use the same Gmail for sender (or a different one if you prefer).
+6. Logs and file locations
+- Default capture folder example: C:\SecurityCaptures
+- Script logs example: C:\SecurityScript\task_debug.log or C:\SecurityCaptures\security_log.txt (check your script for exact paths).
+- If you do not see photos or logs, check Task Scheduler history and the script's console output.
 
-### 3. Test the Script Manually
+7. Troubleshooting
+- Webcam not found: make sure the camera is enabled and not used by another program. Script tries camera indexes 0–2; if your camera uses a different index, adjust code.
+- Email sending fails:
+  - Verify EMAIL_SENDER, EMAIL_PASSWORD (App Password), EMAIL_RECEIVER environment variables.
+  - Confirm 2‑Step Verification is enabled and App Password is active.
+  - Check SMTP configuration in the script (Gmail uses smtp.gmail.com:587 with TLS).
+- No photo but email sent: camera was not accessible — script still sends location-only message.
+- Permission/folder errors: run a one-time test from an elevated Command Prompt or adjust folder permissions.
+- Location is approximate: public IP geolocation is not precise (no GPS).
 
-- Save the modified script as `security_camera.py`.
-- Open Command Prompt and navigate to the script's folder:
-  ```
-  cd C:\Path\To\Your\Script\Folder
-  ```
-- Run a test:
-  ```
-  python security_camera.py test
-  ```
-- It should:
-  - Create folders `C:\SecurityCaptures` and `C:\SecurityScript` if needed.
-  - Capture a photo (saved in `C:\SecurityCaptures`).
-  - Fetch approximate location via IP.
-  - Send an email with the photo.
-- Check console output, the captures folder for photos/logs, and your inbox.
-
-### 4. Set Up Automatic Triggers with Task Scheduler
-
-- Open **Task Scheduler** (search in Start menu).
-- Click "Create Task" (not Basic Task for more options):
-  - **General tab**: Name it e.g., "Security Camera on Unlock". Check "Run with highest privileges".
-  - **Triggers tab**: New → Begin the task: "On workstation unlock" (or "On workstation lock", "At log on of any user").
-  - **Actions tab**: New → Action: "Start a program" →
-    - Program/script: Browse to `python.exe` (usually `C:\Users\YourUser\AppData\Local\Programs\Python\Python312\python.exe` or similar).
-    - Add arguments: `C:\Path\To\security_camera.py unlock` (change "unlock" to "lock" or "logon" as needed).
-  - **Conditions tab**: Uncheck "Start the task only if the computer is on AC power" (useful for laptops).
-  - **Settings tab**: Check "Hidden" if you don't want a console window to flash.
-- Save the task (may prompt for admin password).
-- Test: Lock and unlock your PC — you should receive an email.
-
-Create separate tasks for lock/logon if desired.
-
-### 5. Troubleshooting
-
-- **Webcam not working?** Ensure it's enabled, not in use by another app, and privacy settings allow access. The script tries camera indexes 0-2.
-- **Email fails?** Double-check App Password, 2FA enabled, and environment variables. Test SMTP manually if needed.
-- **No photo but email sent?** Camera unavailable — script still sends location info.
-- **Folders not created/Permissions?** Run Command Prompt as Administrator for first test.
-- **Debug logs:** Check `C:\SecurityScript\task_debug.log` and `C:\SecurityCaptures\security_log.txt`.
-- **Location inaccurate?** It's based on public IP (not GPS).
-
-Enjoy your basic PC security monitor! If you improve the script, feel free to contribute via pull request.
-``` 
