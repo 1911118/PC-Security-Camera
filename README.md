@@ -23,7 +23,7 @@ This Python script captures a webcam photo and sends an email alert with approxi
 For Gmail: Enable 2FA and use an "App Password" from Google Account settings.
 
 ## Setup Instructions
-1. Clone this repo: `git clone https://github.com/yourusername/PC-Security-Camera.git`.
+1. Clone this repo: `git clone https://github.com/1911118/PC-Security-Camera.git`.
 2. Edit `security_camera.py`:
    - Update `SAVE_FOLDER` if needed (default: C:\SecurityCaptures).
    - Set `EMAIL_RECEIVER` to your email.
